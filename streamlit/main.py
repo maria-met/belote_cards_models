@@ -27,7 +27,7 @@ def main():
         # Prepare files parameter for POST request
         files = {"img": ("image.jpg", img_bytes.getvalue())}
 
-        response = requests.post("https://beloteapi-bs43vffbua-ew.a.run.app/detect_card", files=files)
+        response = requests.post("", files=files)
         # Display prediction result
         # st.image(picture, caption=response.text)
         st.write(response.text)
