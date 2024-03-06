@@ -15,12 +15,11 @@ def main():
 
     if st.button("Capture Image"):
 
-        image = st.camera_input("Take a picture").getvalue()
+        picture = st.camera_input("Take a picture")
 
-        if image is not None:
-            print(image)
-            file = np.frombuffer(image, np.uint8)
-            response = requests.post("http://localhost:8000/predict", files=file)
+        if picture:
+            img = Image.open(picture)
+            response = requests.post("", files=file)
 
             # Display prediction result
             st.write("2. Prediction Result:")
