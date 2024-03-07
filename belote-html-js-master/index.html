@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Game</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f0f0f0;
+    }
+
+    .game-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .player-row {
+        display: flex;
+        justify-content: center;
+        margin: 20px;
+    }
+
+    .player {
+        margin: 0 20px;
+        text-align: center;
+    }
+
+    .player-cards {
+        display: flex;
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    .card {
+        width: 255px;
+        height: 395px;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        margin: 0 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .center-card {
+        margin: 20px;
+    }
+    #video {
+      border: 1px solid black;
+      box-shadow: 2px 2px 3px black;
+      width: 320px;
+      height: 240px;
+    }
+
+    #photo {
+      border: 1px solid black;
+      box-shadow: 2px 2px 3px black;
+      width: 320px;
+      height: 240px;
+    }
+
+    #canvas {
+      display: none;
+    }
+
+    .camera {
+      width: 340px;
+      display: inline-block;
+    }
+
+    .output {
+      width: 340px;
+      display: inline-block;
+      vertical-align: top;
+    }
+
+    #startbutton {
+      display: block;
+      position: relative;
+      margin-left: auto;
+      margin-right: auto;
+      bottom: 32px;
+      background-color: rgb(0 150 0 / 50%);
+      border: 1px solid rgb(255 255 255 / 70%);
+      box-shadow: 0px 0px 1px 2px rgb(0 0 0 / 20%);
+      font-size: 14px;
+      font-family: "Lucida Grande", "Arial", sans-serif;
+      color: rgb(255 255 255 / 100%);
+    }
+
+    .contentarea {
+      font-size: 16px;
+      font-family: "Lucida Grande", "Arial", sans-serif;
+      width: 760px;
+    }
+
+</style>
+</head>
+<body>
+  <div class="contentarea">
+
+    <div class="camera">
+      <video id="video">Video stream not available.</video>
+
+    </div>
+    <canvas id="canvas"> </canvas>
+    <div class="output">
+      <img id="photo" alt="The screen capture will appear in this box." />
+      <button id="startbutton">Submit</button>
+    </div>
+
+  </div>
+
+<div class="game-container">
+
+    <div class="center-card">
+      <div id="tablecard" class="card"></div>
+  </div>
+
+
+    </div>
+</div>
+
+</body>
+</html>
+
+
+
+<script>
+  (() => {
+
+    const width = 320;
+    let height = 0;
+    let streaming = false;
+    let video = null;
+    let canvas = null;
+    let photo = null;
+    let startbutton = null;
+    let tablecard = null;
+
+    function showViewLiveResultButton() {
+      if (window.self !== window.top) {
+        document.querySelector(".contentarea").remove();
+        const button = document.createElement("button");
+        button.textContent = "View live result of the example code above";
+        document.body.append(button);
+        button.addEventListener("click", () => window.open(location.href));
+        return true;
+      }
+      return false;
+    }
+
+    function startup() {
+      if (showViewLiveResultButton()) {
+        return;
+      }
+      video = document.getElementById("video");
+      canvas = document.getElementById("canvas");
+      photo = document.getElementById("photo");
+      startbutton = document.getElementById("startbutton");
+      tablecard = document.getElementById("tablecard");
+
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: false })
+        .then((stream) => {
+          video.srcObject = stream;
+          video.play();
+        })
+        .catch((err) => {
+          console.error(`An error occurred: ${err}`);
+        });
+
+      video.addEventListener(
+        "canplay",
+        (ev) => {
+          if (!streaming) {
+            height = video.videoHeight / (video.videoWidth / width);
+
+
+            if (isNaN(height)) {
+              height = width / (4 / 3);
+            }
+
+            video.setAttribute("width", width);
+            video.setAttribute("height", height);
+            canvas.setAttribute("width", width);
+            canvas.setAttribute("height", height);
+            streaming = true;
+          }
+        },
+        false,
+      );
+
+      document.addEventListener(
+        "keyup",
+        (ev) => {
+          if (ev.code === "Space" || ev.keyCode === 32) {
+            takepicture();
+            ev.preventDefault()
+          }
+        },
+        false,
+      );
+
+      clearphoto();
+    }
+
+    function clearphoto() {
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#AAA";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const data = canvas.toDataURL("image/png");
+      photo.setAttribute("src", data);
+    }
+    function takepicture() {
+      const context = canvas.getContext("2d");
+      if (width && height) {
+        canvas.width = width;
+        canvas.height = height;
+        context.drawImage(video, 0, 0, width, height);
+
+        const data = canvas.toDataURL("image/png");
+        photo.setAttribute("src", data);
+
+        // Create a FormData object
+        const formData = new FormData();
+        formData.append('img', dataURLtoFile(data, 'image.png')); // Convert data URI to File object
+
+        // Send a POST request to the API endpoint
+        fetch('https://beloteapi-bs43vffbua-ew.a.run.app/detect_card', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.text())
+        .then(data => {
+          // Update the content of the tablecard element with the response from the API
+
+          console.log(`url('${data.replaceAll('"', '')}.jpg');`);
+          document.getElementById('tablecard').style.backgroundImage = `url("${data.replaceAll('"', '')}.jpg")`;
+
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+      } else {
+        clearphoto();
+      }
+    }
+
+    // Function to convert Data URI to File object
+    function dataURLtoFile(dataUrl, filename) {
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], filename, { type: mime });
+    }
+
+    // Set up our event listener to run the startup process
+    // once loading is complete.
+    window.addEventListener("load", startup, false);
+  })();
+</script>
